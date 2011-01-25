@@ -122,7 +122,6 @@ module ActiveRecord
         context.init(logger)
         @config = config
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
-        @limit = @offset = 0
         unless connection.sql_norow("USE #{database}")
           raise "Cannot USE #{database}"
         end
@@ -315,25 +314,6 @@ SQLTEXT
         ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
       end
 
-      def add_limit_offset!(sql, options) # :nodoc:
-        @limit = options[:limit]
-        @offset = options[:offset]
-        if use_temp_table?
-          # Use temp table to hack offset with Sybase
-          sql.sub!(/ FROM /i, ' INTO #artemp FROM ')
-        elsif zero_limit?
-          # "SET ROWCOUNT 0" turns off limits, so we have
-          # to use a cheap trick.
-          if sql =~ /WHERE/i
-            sql.sub!(/WHERE/i, 'WHERE 1 = 2 AND ')
-          elsif sql =~ /ORDER\s+BY/i
-            sql.sub!(/ORDER\s+BY/i, 'WHERE 1 = 2 ORDER BY')
-          else
-            sql << 'WHERE 1 = 2'
-          end
-        end
-      end
-
       def add_lock!(sql, options) #:nodoc:
         @logger.info "Warning: Sybase :lock option '#{options[:lock].inspect}' not supported" if @logger && options.has_key?(:lock)
         sql
@@ -440,29 +420,14 @@ SQLTEXT
         end
       end
 
-      # If limit is not set at all, we can ignore offset;
-      # if limit *is* set but offset is zero, use normal select
-      # with simple SET ROWCOUNT.  Thus, only use the temp table
-      # if limit is set and offset > 0.
-      def use_temp_table?
-        !@limit.nil? && !@offset.nil? && @offset > 0
-      end
-
-      def zero_limit?
-        !@limit.nil? && @limit == 0
-      end
-
       def raw_execute(sql, name = nil)
         log(sql, name) do
           @connection.context.reset
-          @logger.debug "Setting row count to (#{@limit})" if @logger && @limit
-          @connection.set_rowcount(@limit || 0)
           if sql =~ /^\s*SELECT/i
             @connection.sql(sql)
           else
             @connection.sql_norow(sql)
           end
-          @limit = @offset = nil
           if @connection.cmd_fail? or @connection.context.failed?
             raise "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}"
           end
@@ -471,22 +436,7 @@ SQLTEXT
 
       # Select limit number of rows starting at optional offset.
       def select(sql, name = nil)
-        if !use_temp_table?
-          execute(sql, name)
-        else
-          log(sql, name) do
-            # Select into a temp table and prune results
-            @logger.debug "Selecting #{@limit + (@offset || 0)} or fewer rows into #artemp" if @logger
-            @connection.context.reset
-            @connection.set_rowcount(@limit + (@offset || 0))
-            @connection.sql_norow(sql)  # Select into temp table
-            @logger.debug "Deleting #{@offset || 0} or fewer rows from #artemp" if @logger
-            @connection.set_rowcount(@offset || 0)
-            @connection.sql_norow("delete from #artemp") # Delete leading rows
-            @connection.set_rowcount(0)
-            @connection.sql("select * from #artemp") # Return the rest
-          end
-        end
+        execute(sql, name)
 
         raise StatementInvalid, "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}" if @connection.context.failed? or @connection.cmd_fail?
       
@@ -500,8 +450,6 @@ SQLTEXT
             rows << hashed_row
           end
         end
-        @connection.sql_norow("drop table #artemp") if use_temp_table?
-        @limit = @offset = nil
         rows
       end
 
