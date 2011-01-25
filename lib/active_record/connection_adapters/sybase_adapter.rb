@@ -435,7 +435,17 @@ SQLTEXT
       end
 
       # Select limit number of rows starting at optional offset.
+      # If a DECLARE CURSOR statement is present in the SQL query,
+      # runs it as a separate batch.
+      CursorRegexp = /DECLARE [_\w\d]+ ?(?:UNIQUE|SCROLL|NO SCROLL|DYNAMIC SCROLL|INSENSITIVE) CURSOR FOR .+ (?:FOR (?:READ ONLY|UPDATE))/m
+
       def select(sql, name = nil)
+        if sql =~ CursorRegexp
+          cursor      = $&
+          sql[cursor] = ''
+          execute(cursor, "Cursor declaration for #{name}")
+        end
+
         execute(sql, name)
 
         raise StatementInvalid, "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}" if @connection.context.failed? or @connection.cmd_fail?
