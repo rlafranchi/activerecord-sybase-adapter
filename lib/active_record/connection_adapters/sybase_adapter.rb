@@ -292,6 +292,23 @@ SQLTEXT
         true
       end
 
+      def supports_primary_key? #:nodoc:
+        true
+      end
+
+      def primary_key(table)
+        sql = <<-sql
+          SELECT index_col(usr.name || "." || obj.name, idx.indid, 1)
+          FROM sysobjects obj
+          INNER JOIN sysusers usr on obj.uid = usr.uid
+          INNER JOIN sysindexes idx on obj.id = idx.id
+          WHERE idx.status & 0x12 > 0 AND
+                obj.name = #{quote table}
+        sql
+
+        select_value sql, "PK for #{table}"
+      end
+
       def rename_table(name, new_name)
         execute "EXEC sp_rename '#{name}', '#{new_name}'"
       end
