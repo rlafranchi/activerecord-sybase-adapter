@@ -175,37 +175,6 @@ module ActiveRecord
         30
       end
 
-      def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
-        begin
-          table_name = get_table_name(sql)
-          col = get_identity_column(table_name)
-          ii_enabled = false
-
-          if col != nil
-            if query_contains_identity_column(sql, col)
-              begin
-                enable_identity_insert(table_name, true)
-                ii_enabled = true
-              rescue Exception => e
-                raise ActiveRecordError, "IDENTITY_INSERT could not be turned ON"
-              end
-            end
-          end
-
-          log(sql, name) do
-            super || select_value("SELECT @@IDENTITY AS last_id")
-          end
-        ensure
-          if ii_enabled
-            begin
-              enable_identity_insert(table_name, false)
-            rescue Exception => e
-              raise ActiveRecordError, "IDENTITY_INSERT could not be turned OFF"
-            end
-          end
-        end
-      end
-
       def execute(sql, name = nil)
         raw_execute(sql, name)
         @connection.results[0].row_count
@@ -371,12 +340,6 @@ SQLTEXT
         sql
       end
 
-      def enable_identity_insert(table_name, enable = true)
-        if has_identity_column(table_name)
-          execute "SET IDENTITY_INSERT #{table_name} #{enable ? 'ON' : 'OFF'}"
-        end
-      end
-
     private
       def check_null_for_column?(col, sql)
         # Sybase columns are NOT NULL by default, so explicitly set NULL
@@ -463,16 +426,6 @@ SQLTEXT
         rows
       end
 
-      def get_table_name(sql)
-        if sql =~ /^\s*insert\s+into\s+([^\(\s]+)\s*|^\s*update\s+([^\(\s]+)\s*/i
-          $1
-        elsif sql =~ /from\s+([^\(\s]+)\s*/i
-          $1
-        else
-          nil
-        end
-      end
-
       def has_identity_column(table_name)
         !get_identity_column(table_name).nil?
       end
@@ -487,8 +440,10 @@ SQLTEXT
         @id_columns[table_name]
       end
 
-      def query_contains_identity_column(sql, col)
-        sql =~ /\[#{col}\]/
+      def enable_identity_insert(table_name, enable = true)
+        if has_identity_column(table_name)
+          execute "SET IDENTITY_INSERT #{table_name} #{enable ? 'ON' : 'OFF'}"
+        end
       end
 
       # Resolve all user-defined types (udt) to their fundamental types.
