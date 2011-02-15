@@ -190,7 +190,7 @@ module ActiveRecord
 
       def tables(name = nil)
         name ||= 'Tables list'
-        select("select name from sysobjects where type='U'", name).map { |row| row['name'] }
+        select("SELECT name FROM sysobjects WHERE type IN ('U', 'V')", name).map { |row| row['name'] }
       end
 
       def indexes(table_name, name = nil)
@@ -210,7 +210,7 @@ SELECT col.name AS name, type.name AS type, col.prec, col.scale,
   col.length, col.status, obj.sysstat2, def.text
  FROM sysobjects obj, syscolumns col, systypes type, syscomments def
  WHERE obj.id = col.id AND col.usertype = type.usertype AND type.name != 'timestamp' 
-  AND col.cdefault *= def.id AND obj.type = 'U' AND obj.name = '#{table_name}' ORDER BY col.colid
+  AND col.cdefault *= def.id AND obj.type IN ('U', 'V') AND obj.name = '#{table_name}' ORDER BY col.colid
 SQLTEXT
         log(sql, "Columns for #{table_name}") do
           @connection.sql sql
