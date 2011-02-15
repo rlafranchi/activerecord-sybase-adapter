@@ -189,6 +189,7 @@ module ActiveRecord
       end
 
       def tables(name = nil)
+        name ||= 'Tables list'
         select("select name from sysobjects where type='U'", name).map { |row| row['name'] }
       end
 
@@ -211,9 +212,9 @@ SELECT col.name AS name, type.name AS type, col.prec, col.scale,
  WHERE obj.id = col.id AND col.usertype = type.usertype AND type.name != 'timestamp' 
   AND col.cdefault *= def.id AND obj.type = 'U' AND obj.name = '#{table_name}' ORDER BY col.colid
 SQLTEXT
-        @logger.debug "Get Column Info for table '#{table_name}'" if @logger
-        @connection.set_rowcount(0)
-        @connection.sql(sql)
+        log(sql, "Columns for #{table_name}") do
+          @connection.sql sql
+        end
 
         raise "SQL Command for table_structure for #{table_name} failed\nMessage: #{@connection.context.message}" if @connection.context.failed?
         return nil if @connection.cmd_fail?
