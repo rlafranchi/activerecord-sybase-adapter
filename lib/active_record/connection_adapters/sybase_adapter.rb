@@ -95,7 +95,7 @@ module ActiveRecord
     #   1> checkpoint
     #   2> go
     class SybaseAdapter < AbstractAdapter # :nodoc:
-      class ColumnWithIdentity < Column
+      class SybaseColumn < Column
         attr_reader :identity
 
         def initialize(name, default, sql_type = nil, nullable = nil, identity = nil, primary = nil)
@@ -125,7 +125,7 @@ module ActiveRecord
           # FIXME: sybase-ctlib uses separate sql method for binary columns.
           value
         end
-      end # class ColumnWithIdentity
+      end # class SybaseColumn
 
       # Sybase adapter
       def initialize(logger, connection_parameters, database, config)
@@ -253,7 +253,7 @@ module ActiveRecord
           nullable = (status & 8) == 8
           identity = status >= 128
           primary = (sysstat2 & 8) == 8
-          ColumnWithIdentity.new(name, default_value, type, nullable, identity, primary)
+          SybaseColumn.new(name, default_value, type, nullable, identity, primary)
         end
       end
 
@@ -510,7 +510,7 @@ module ActiveRecord
       end
     end # class SybaseAdapter
 
-    class SybaseAdapterContext < SybSQLContext
+    class Context < SybSQLContext
       DEADLOCK = 1205
       attr_reader :message
 
@@ -586,7 +586,7 @@ module ActiveRecord
 
         return true
       end
-    end # class SybaseAdapterContext
+    end # class Context
 
   end # module ConnectionAdapters
 end # module ActiveRecord
