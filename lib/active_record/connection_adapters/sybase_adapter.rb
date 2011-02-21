@@ -424,8 +424,9 @@ module ActiveRecord
           else
             @connection.sql_norow(sql)
           end
-          if @connection.cmd_fail? or @connection.context.failed?
-            raise "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}"
+
+          if @connection.cmd_fail? || @connection.context.failed?
+            raise "#{name} SQL #{sql} failed: #{@connection.context.message}"
           end
         end
       end
@@ -444,8 +445,6 @@ module ActiveRecord
 
         execute(sql, name)
 
-        raise StatementInvalid, "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}" if @connection.context.failed? or @connection.cmd_fail?
-      
         rows = []
         results = @connection.top_row_result
         if results && results.rows.length > 0
