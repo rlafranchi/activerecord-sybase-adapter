@@ -307,11 +307,6 @@ module ActiveRecord
           ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
       end
 
-      def add_lock!(sql, options) #:nodoc:
-        @logger.info "Warning: Sybase :lock option '#{options[:lock].inspect}' not supported" if @logger && options.has_key?(:lock)
-        sql
-      end
-
       def supports_migrations? #:nodoc:
         true
       end
