@@ -362,7 +362,15 @@ module ActiveRecord
       end
 
       def remove_default_constraint(table_name, column_name)
-        sql = "select def.name from sysobjects def, syscolumns col, sysobjects tab where col.cdefault = def.id and col.name = '#{column_name}' and tab.name = '#{table_name}' and col.id = tab.id"
+        sql = <<-sql
+          SELECT def.name
+          FROM sysobjects def, syscolumns col, sysobjects tab
+          WHERE col.cdefault = def.id AND
+                col.name = '#{column_name}' AND
+                tab.name = '#{table_name}'  AND
+                col.id = tab.id
+        sql
+
         select(sql).each do |constraint|
           execute "ALTER TABLE #{table_name} DROP CONSTRAINT #{constraint["name"]}"
         end
