@@ -226,19 +226,20 @@ module ActiveRecord
       end
 
       def columns(table_name, name = nil)
-        sql = <<SQLTEXT
-SELECT col.name AS name, type.name AS type, col.prec, col.scale,
-  col.length, col.status, obj.sysstat2, def.text
- FROM sysobjects obj, syscolumns col, systypes type, syscomments def
- WHERE obj.id = col.id AND col.usertype = type.usertype AND type.name != 'timestamp' 
-  AND col.cdefault *= def.id AND obj.type IN ('U', 'V') AND obj.name = '#{table_name}' ORDER BY col.colid
-SQLTEXT
-        log(sql, "Columns for #{table_name}") do
-          @connection.sql sql
-        end
+        sql = <<-sql
+          SELECT col.name AS name, type.name AS type, col.prec, col.scale,
+                 col.length, col.status, obj.sysstat2, def.text
+          FROM sysobjects obj, syscolumns col, systypes type, syscomments def
+          WHERE obj.id = col.id              AND
+                col.usertype = type.usertype AND
+                type.name != 'timestamp'     AND
+                col.cdefault *= def.id       AND
+                obj.type IN ('U', 'V')       AND
+                obj.name = '#{table_name}'
+          ORDER BY col.colid
+        sql
 
-        raise "SQL Command for table_structure for #{table_name} failed\nMessage: #{@connection.context.message}" if @connection.context.failed?
-        return nil if @connection.cmd_fail?
+        raw_execute sql, "Columns for #{table_name}"
 
         @connection.top_row_result.rows.map do |row|
           name, type, prec, scale, length, status, sysstat2, default = row
