@@ -398,28 +398,15 @@ SQLTEXT
         true
       end
 
-      # Return the last value of the identity global value.
-      def last_insert_id
-        @connection.sql("SELECT @@IDENTITY")
+      # Executes the given INSERT sql and returns the new record's ID
+      def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
+        super
+
+        @connection.sql('SELECT @@IDENTITY')
         unless @connection.cmd_fail?
           id = @connection.top_row_result.rows.first.first
-          if id
-            id = id.to_i
-            id = nil if id == 0
-          end
-        else
-          id = nil
-        end
-        id
-      end
-
-      def affected_rows(name = nil)
-        @connection.sql("SELECT @@ROWCOUNT")
-        unless @connection.cmd_fail?
-          count = @connection.top_row_result.rows.first.first
-          count = count.to_i if count
-        else
-          0
+          id = id.to_i if id
+          return id if id > 0
         end
       end
 
