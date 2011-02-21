@@ -21,6 +21,10 @@
 #
 # 15 Feb 2011: More clean ups, implemented .primary_key so that .save() works from AR
 #
+# 21 Feb 2011: Clean up as usual, implemented .insert_sql() so that .save() correctly
+#              sets the new record ID in the AR instance; finally implemented
+#              reconnect! - in the safest way possible.
+#
 
 require 'active_record/connection_adapters/abstract_adapter'
 
@@ -77,7 +81,7 @@ module ActiveRecord
     # * The sybase-ctlib bindings do not support the DATE SQL column type; use DATETIME instead.
     # * Table and column names are limited to 30 chars in Sybase 12.5
     # * :binary columns not yet supported
-    # * :boolean columns use the BIT SQL type, which does not allow nulls or 
+    # * :boolean columns use the BIT SQL type, which does not allow nulls or
     #   indexes.  If a DEFAULT is not specified for ALTER TABLE commands, the
     #   column will be declared with DEFAULT 0 (false).
     #
@@ -134,9 +138,8 @@ module ActiveRecord
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         @quoted_column_names = {}
-        unless connection.sql_norow("USE #{database}")
-          raise "Cannot USE #{database}"
-        end
+
+        raise "Cannot USE #{database}" unless @connection.sql_norow("USE #{database}")
       end
 
       def native_database_types
@@ -201,9 +204,15 @@ module ActiveRecord
         @connection.results[0].row_count
       end
 
-      def begin_db_transaction()    raw_execute "BEGIN TRAN" end
-      def commit_db_transaction()   raw_execute "COMMIT TRAN" end
-      def rollback_db_transaction() raw_execute "ROLLBACK TRAN" end
+      def begin_db_transaction()
+        raw_execute 'BEGIN TRAN'
+      end
+      def commit_db_transaction()
+        raw_execute 'COMMIT TRAN'
+      end
+      def rollback_db_transaction()
+        raw_execute 'ROLLBACK TRAN'
+      end
 
       def current_database
         select_value 'select DB_NAME() as name', 'Current DB name'
@@ -269,7 +278,7 @@ module ActiveRecord
         return value.quoted_id if value.respond_to?(:quoted_id)
 
         case value
-          when String                
+          when String
             if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
               "#{quote_string(column.class.string_to_binary(value))}"
             elsif @numconvert && force_numeric?(column) && value =~ /^[+-]?[0-9]+$/o
@@ -572,7 +581,7 @@ module ActiveRecord
 
         @failed = true
 
-        # Not retry , CS_CV_RETRY_FAIL( probability TimeOut ) 
+        # Not retry , CS_CV_RETRY_FAIL( probability TimeOut )
         if( msg[ 'severity' ] == "RETRY_FAIL" ) then
           @timeout_p = true
           return false
