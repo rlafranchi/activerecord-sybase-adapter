@@ -133,6 +133,7 @@ module ActiveRecord
         super(connect!(logger), logger)
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
+        @quoted_column_names = {}
         unless connection.sql_norow("USE #{database}")
           raise "Cannot USE #{database}"
         end
@@ -301,7 +302,8 @@ SQLTEXT
       def quote_column_name(name)
         # If column name is close to max length, skip the quotes, since they
         # seem to count as part of the length.
-        ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
+        @quoted_column_names[name] ||=
+          ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
       end
 
       def add_lock!(sql, options) #:nodoc:
