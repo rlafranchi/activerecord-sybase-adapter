@@ -24,8 +24,13 @@
 
 require 'active_record/connection_adapters/abstract_adapter'
 
-begin
-require 'sybsql'
+unless defined? SybSQL
+  begin
+    require 'sybsql'
+  rescue LoadError
+    raise '!!! Cannot require sybsql, cannot load Sybase Adapter'
+  end
+end
 
 module ActiveRecord
   class Base
@@ -594,8 +599,4 @@ class Fixtures
       original_insert_fixtures
     end
   end
-end
-
-rescue LoadError => cannot_require_sybase
-  # Couldn't load sybase adapter
 end
