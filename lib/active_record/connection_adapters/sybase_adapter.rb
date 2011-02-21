@@ -206,7 +206,7 @@ module ActiveRecord
       def rollback_db_transaction() raw_execute "ROLLBACK TRAN" end
 
       def current_database
-        select_value("select DB_NAME() as name")
+        select_value 'select DB_NAME() as name', 'Current DB name'
       end
 
       def tables(name = nil)
