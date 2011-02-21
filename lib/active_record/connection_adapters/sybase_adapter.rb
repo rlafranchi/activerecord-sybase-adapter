@@ -53,9 +53,10 @@ module ActiveRecord
         raise ArgumentError, "No database specified. Missing argument: database."
       end
 
-      ConnectionAdapters::SybaseAdapter.new(
-        SybSQL.new({'S' => host, 'U' => username, 'P' => password},
-          ConnectionAdapters::SybaseAdapterContext), database, config, logger)
+      ConnectionAdapters::SybaseAdapter.new(logger,
+        {'S' => host, 'U' => username, 'P' => password},
+        database, config
+      )
     end
   end # class Base
 
@@ -127,11 +128,10 @@ module ActiveRecord
       end # class ColumnWithIdentity
 
       # Sybase adapter
-      def initialize(connection, database, config = {}, logger = nil)
-        super(connection, logger)
-        context = connection.context
-        context.init(logger)
-        @config = config
+      def initialize(logger, connection_parameters, database, config)
+        @connection_parameters, @config = connection_parameters, config
+        super(connect!(logger), logger)
+
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         unless connection.sql_norow("USE #{database}")
           raise "Cannot USE #{database}"
@@ -172,14 +172,23 @@ module ActiveRecord
         !(@connection.connection.nil? || @connection.connection_dead?)
       end
 
+      def connect!(logger = nil)
+        logger ||= @logger
+
+        @connection =
+          SybSQL.new(@connection_parameters, Context).tap do |connection|
+            context = connection.context
+            context.init(logger)
+          end
+      end
+
       def disconnect!
         @connection.close rescue nil
       end
 
       def reconnect!
-        raise "Sybase Connection Adapter does not yet support reconnect!"
-        # disconnect!
-        # connect! # Not yet implemented
+        disconnect!
+        connect!
       end
 
       def table_alias_length
@@ -414,6 +423,8 @@ SQLTEXT
 
       def raw_execute(sql, name = nil)
         log(sql, name) do
+          raise 'Connection is closed' unless active?
+
           @connection.context.reset
           if sql =~ /^\s*SELECT/i
             @connection.sql(sql)
