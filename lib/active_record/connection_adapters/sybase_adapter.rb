@@ -1,12 +1,5 @@
+require 'arel/visitors/sybase'
 require 'active_record/connection_adapters/abstract_adapter'
-
-unless defined? SybSQL
-  begin
-    require 'sybsql'
-  rescue LoadError
-    raise '!!! Cannot require sybsql, cannot load Sybase Adapter'
-  end
-end
 
 module ActiveRecord
   class Base
@@ -17,22 +10,15 @@ module ActiveRecord
       username = config[:username] ? config[:username].to_s : 'sa'
       password = config[:password] ? config[:password].to_s : ''
 
-      if config.has_key?(:host)
-        host = config[:host]
-      else
+      if not config.has_key?(:host) and not config.has_key?(:dataserver)
         raise ArgumentError, "No database server name specified. Missing argument: host."
       end
 
-      if config.has_key?(:database)
-        database = config[:database]
-      else
+      if not config.has_key?(:database)
         raise ArgumentError, "No database specified. Missing argument: database."
       end
 
-      ConnectionAdapters::SybaseAdapter.new(logger,
-        {'S' => host, 'U' => username, 'P' => password},
-        database, config
-      )
+      ConnectionAdapters::SybaseAdapter.new(logger, config)
     end
   end # class Base
 
@@ -120,15 +106,14 @@ module ActiveRecord
         :boolean     => { :name => "bit" }
       }
 
-      def initialize(logger, connection_parameters, database, config)
-        @connection_parameters, @config = connection_parameters, config
-        super(connect!(logger), logger)
+      def initialize(logger, config)
+        @config = config
+        @connection = connect!(logger)
+        super(@connection, logger)
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
         @quoted_column_names = {}
-
-        raise "Cannot USE #{database}" unless @connection.sql_norow("USE #{database}")
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
@@ -198,7 +183,7 @@ module ActiveRecord
       # CONNECTION MANAGEMENT ====================================
 
       def active?
-        !(@connection.connection.nil? || @connection.connection_dead?)
+        @connection.active?
       end
 
       def reconnect!
@@ -213,11 +198,25 @@ module ActiveRecord
       def connect!(logger = nil)
         logger ||= @logger
 
-        @connection =
-          SybSQL.new(@connection_parameters, Context).tap do |connection|
-            context = connection.context
-            context.init(logger)
-          end
+        appname = @config[:appname] || Rails.application.class.name.split('::').first rescue nil
+        login_timeout = @config[:login_timeout].present? ? @config[:login_timeout].to_i : nil
+        timeout = @config[:timeout].present? ? @config[:timeout].to_i/1000 : nil
+        encoding = @config[:encoding].present? ? @config[:encoding] : nil
+        @connection = TinyTds::Client.new({
+          :dataserver    => @config[:dataserver],
+          :host          => @config[:host],
+          :port          => @config[:port],
+          :username      => @config[:username],
+          :password      => @config[:password],
+          :database      => @config[:database],
+          :appname       => appname,
+          :login_timeout => login_timeout,
+          :timeout       => timeout,
+          :encoding      => encoding,
+        }).tap do |client|
+            client.execute("SET ANSINULL ON").do
+        end
+
       end
 
       # SCHEMA STATEMENTS ========================================
@@ -269,10 +268,17 @@ module ActiveRecord
           ORDER BY col.colid
         sql
 
-        raw_execute sql, "Columns for #{table_name}"
+        result = select sql, "Columns for #{table_name}"
 
-        @connection.top_row_result.rows.map do |row|
-          name, type, prec, scale, length, status, sysstat2, default = row
+        result.map do | row |
+          name = row['name']
+          type = row['type']
+          prec = row['prec']
+          scale = row['scale']
+          length = row['length']
+          status = row['status']
+          sysstat2 = row['sysstat2']
+          default = row['text']
           name.sub!(/_$/o, '')
           type = normalize_type(type, prec, scale, length)
           default_value = nil
@@ -359,8 +365,8 @@ module ActiveRecord
       # DATABASE STATEMENTS ======================================
 
       def execute(sql, name = nil)
-        raw_execute(sql, name)
-        @connection.results[0].row_count
+        results = raw_execute(sql, name)
+        return results.do
       end
 
       # Executes the given INSERT sql and returns the new record's ID
@@ -413,19 +419,12 @@ module ActiveRecord
       end
 
       def raw_execute(sql, name = nil)
+        # Useful to uncomment when debugging.
+        #p [name, sql]
         log(sql, name) do
           raise 'Connection is closed' unless active?
 
-          @connection.context.reset
-          if sql =~ /^\s*SELECT/i
-            @connection.sql(sql)
-          else
-            @connection.sql_norow(sql)
-          end
-
-          if @connection.cmd_fail? || @connection.context.failed?
-            raise "#{name} SQL #{sql} failed: #{@connection.context.message}"
-          end
+          return @connection.execute(sql)
         end
       end
 
@@ -433,31 +432,19 @@ module ActiveRecord
         select(sql, name).map!(&:values)
       end
 
-      # Select limit number of rows starting at optional offset.
-      # If a DECLARE CURSOR statement is present in the SQL query,
-      # runs it as a separate batch.
-      CursorRegexp = /DECLARE [_\w\d]+ ?(?:UNIQUE|SCROLL|NO SCROLL|DYNAMIC SCROLL|INSENSITIVE) CURSOR FOR .+ (?:FOR (?:READ ONLY|UPDATE))/m
-
       def select(sql, name = nil)
-        if sql =~ CursorRegexp
-          cursor      = $&
-          sql[cursor] = ''
-          execute(cursor, "Cursor declaration for #{name}")
+        result = raw_execute(sql, name)
+        clean_up_result result do
+          return result.to_a
         end
+      end
 
-        execute(sql, name)
-
-        rows = []
-        results = @connection.top_row_result
-        if results && results.rows.length > 0
-          fields = results.columns.map { |column| column.sub(/_$/, '') }
-          results.rows.each do |row|
-            hashed_row = {}
-            row.zip(fields) { |cell, column| hashed_row[column] = cell }
-            rows << hashed_row
-          end
+      def clean_up_result(result)
+        begin
+          return yield result
+        ensure
+          result.cancel
         end
-        rows
       end
 
       def has_identity_column(table_name)
@@ -519,84 +506,6 @@ module ActiveRecord
         "#{type}#{spec}"
       end
     end # class SybaseAdapter
-
-    class Context < SybSQLContext
-      DEADLOCK = 1205
-      attr_reader :message
-
-      def init(logger = nil)
-        @deadlocked = false
-        @failed = false
-        @logger = logger
-        @message = nil
-      end
-
-      def srvmsgCB(con, msg)
-        # Do not log change of context messages.
-        if msg['severity'] == 10 or msg['severity'] == 0
-          return true
-        end
-
-        if msg['msgnumber'] == DEADLOCK
-          @deadlocked = true
-        else
-          @logger.info "SQL Command failed!" if @logger
-          @failed = true
-        end
-
-        if @logger
-          @logger.error "** SybSQLContext Server Message: **"
-          @logger.error "  Message number #{msg['msgnumber']} Severity #{msg['severity']} State #{msg['state']} Line #{msg['line']}"
-          @logger.error "  Server #{msg['srvname']}"
-          @logger.error "  Procedure #{msg['proc']}"
-          @logger.error "  Message String:  #{msg['text']}"
-        end
-
-        @message = msg['text']
-
-        true
-      end
-
-      def deadlocked?
-        @deadlocked
-      end
-
-      def failed?
-        @failed
-      end
-
-      def reset
-        @deadlocked = false
-        @failed = false
-        @message = nil
-      end
-
-      def cltmsgCB(con, msg)
-        return true unless ( msg.kind_of?(Hash) )
-        unless ( msg[ "severity" ] ) then
-          return true
-        end
-
-        if @logger
-          @logger.error "** SybSQLContext Client-Message: **"
-          @logger.error "  Message number: LAYER=#{msg[ 'layer' ]} ORIGIN=#{msg[ 'origin' ]} SEVERITY=#{msg[ 'severity' ]} NUMBER=#{msg[ 'number' ]}"
-          @logger.error "  Message String: #{msg['msgstring']}"
-          @logger.error "  OS Error: #{msg['osstring']}"
-
-          @message = msg['msgstring']
-        end
-
-        @failed = true
-
-        # Not retry , CS_CV_RETRY_FAIL( probability TimeOut )
-        if( msg[ 'severity' ] == "RETRY_FAIL" ) then
-          @timeout_p = true
-          return false
-        end
-
-        return true
-      end
-    end # class Context
 
   end # module ConnectionAdapters
 end # module ActiveRecord

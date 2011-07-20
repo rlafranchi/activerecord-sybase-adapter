@@ -22,4 +22,7 @@ Gem::Specification.new do |s|
 
   s.add_development_dependency("rake")
   s.add_development_dependency("yard")
+
+  s.add_dependency "tiny_tds",            ">= 0.4.5"
+  s.add_dependency "arel-sybase-visitor", ">= 0.1.0"
 end
