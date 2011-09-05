@@ -57,9 +57,12 @@ module ActiveRecord
         raise ArgumentError, "No database specified. Missing argument: database."
       end
 
-      ConnectionAdapters::SybaseAdapter.new(logger,
-        {'S' => host, 'U' => username, 'P' => password},
-        database, config
+      ConnectionAdapters::SybaseAdapter.new(
+        nil,
+        logger,
+        { 'S' => host, 'U' => username, 'P' => password },
+        config,
+        database
       )
     end
   end # class Base
@@ -149,9 +152,11 @@ module ActiveRecord
       }
 
 
-      def initialize(logger, connection_parameters, database, config)
+      def initialize(connection, logger, connection_parameters, config, database)
+        super(connection, logger)
         @connection_parameters, @config = connection_parameters, config
-        super(connect, logger)
+
+        connect
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         @quoted_column_names = {}
