@@ -155,13 +155,12 @@ module ActiveRecord
       def initialize(connection, logger, connection_parameters, config, database)
         super(connection, logger)
         @connection_parameters, @config = connection_parameters, config
+        @database = database
 
         connect
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         @quoted_column_names = {}
-
-        raise "Cannot USE #{database}" unless @connection.sql_norow("USE #{database}")
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
@@ -248,6 +247,9 @@ module ActiveRecord
           SybSQL.new(@connection_parameters, Context).tap do |connection|
             context = connection.context
             context.init(@logger)
+
+            connection.sql_norow("USE #{@database}") ||
+                raise("Cannot USE #{@database}")
           end
       end
 
