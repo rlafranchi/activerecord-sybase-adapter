@@ -596,19 +596,22 @@ end # module ActiveRecord
 
 
 # Allow identity inserts for fixtures.
-require "active_record/fixtures"
-class Fixtures
-  alias :original_insert_fixtures :insert_fixtures
+require 'active_record/fixtures'
 
-  def insert_fixtures
-    if @connection.instance_of?(ActiveRecord::ConnectionAdapters::SybaseAdapter)
-      values.each do |fixture|
-        @connection.enable_identity_insert(table_name, true)
-        @connection.execute "INSERT INTO #{@table_name} (#{fixture.key_list}) VALUES (#{fixture.value_list})", 'Fixture Insert'
-        @connection.enable_identity_insert(table_name, false)
+module ActiveRecord
+  class Fixtures
+    alias :original_insert_fixtures :insert_fixtures
+
+    def insert_fixtures
+      if @connection.instance_of?(ActiveRecord::ConnectionAdapters::SybaseAdapter)
+        values.each do |fixture|
+          @connection.enable_identity_insert(table_name, true)
+          @connection.execute "INSERT INTO #{@table_name} (#{fixture.key_list}) VALUES (#{fixture.value_list})", 'Fixture Insert'
+          @connection.enable_identity_insert(table_name, false)
+        end
+      else
+        original_insert_fixtures
       end
-    else
-      original_insert_fixtures
     end
   end
 end
