@@ -1,16 +1,15 @@
 # -*- encoding: utf-8 -*-
-lib = File.expand_path('../lib/', __FILE__)
-$:.unshift lib unless $:.include?(lib)
+$:.unshift File.expand_path('../lib/', __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "activerecord-sybase-adapter"
   s.version     = 1.0
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["John R. Sheets", "Marcello Barnaba"]
-  s.email       = [""]
+  s.authors     = ["John R. Sheets", "Marcello Barnaba", "Simone Carletti"]
+  s.email       = ["", "", "weppos@weppos.net"]
   s.homepage    = "http://github.com/ifad/activerecord-sybase-adapter"
-  s.summary     = "Make ActiveRecord talk to Sybase"
-  s.description = ""
+  s.summary     = "ActiveRecord adapter for Sybase."
+  s.description = "ActiveRecord adapter for Sybase."
 
   s.required_rubygems_version = ">= 1.3.6"
 
