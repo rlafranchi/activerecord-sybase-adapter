@@ -1,19 +1,25 @@
 # -*- encoding: utf-8 -*-
-lib = File.expand_path('../lib/', __FILE__)
-$:.unshift lib unless $:.include?(lib)
+$:.push File.expand_path("../lib", __FILE__)
+# require "/version"
 
 Gem::Specification.new do |s|
   s.name        = "activerecord-sybase-adapter"
-  s.version     = 1.0
+  s.version     = "3.0.0"
+  s.summary     = "ActiveRecord adapter for Sybase."
+  s.description = "ActiveRecord adapter for Sybase."
+
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["John R. Sheets", "Marcello Barnaba"]
-  s.email       = [""]
+  s.required_ruby_version = ">= 1.8.7"
+
+  s.authors     = ["John R. Sheets", "Marcello Barnaba", "Simone Carletti"]
+  s.email       = ["", "vjt@openssl.it", "weppos@weppos.net"]
   s.homepage    = "http://github.com/ifad/activerecord-sybase-adapter"
-  s.summary     = "Make ActiveRecord talk to Sybase"
-  s.description = ""
 
-  s.required_rubygems_version = ">= 1.3.6"
+  s.files         = `git ls-files`.split("\n")
+  s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
+  s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+  s.require_paths = ["lib"]
 
-  s.files        = Dir.glob("lib/**/*") + %w(README.markdown)
-  s.require_path = 'lib'
+  s.add_development_dependency("rake")
+  s.add_development_dependency("yard")
 end
