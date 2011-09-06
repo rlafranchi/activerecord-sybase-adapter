@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.version     = 1.0
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["John R. Sheets", "Marcello Barnaba", "Simone Carletti"]
-  s.email       = ["", "", "weppos@weppos.net"]
+  s.email       = ["", "vjt@openssl.it", "weppos@weppos.net"]
   s.homepage    = "http://github.com/ifad/activerecord-sybase-adapter"
   s.summary     = "ActiveRecord adapter for Sybase."
   s.description = "ActiveRecord adapter for Sybase."
