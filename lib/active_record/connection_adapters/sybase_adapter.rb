@@ -1,31 +1,3 @@
-# sybase_adapter.rb
-# Author: John R. Sheets
-#
-# 01 Mar 2006: Initial version.  Based on code from Will Sobel
-#              (http://dev.rubyonrails.org/ticket/2030)
-#
-# 17 Mar 2006: Added support for migrations; fixed issues with :boolean columns.
-#
-# 13 Apr 2006: Improved column type support to properly handle dates and user-defined
-#              types; fixed quoting of integer columns.
-#
-# 05 Jan 2007: Updated for Rails 1.2 release:
-#              restricted Fixtures#insert_fixtures monkeypatch to Sybase adapter;
-#              removed SQL type precision from TEXT type to fix broken
-#              ActiveRecordStore (jburks, #6878); refactored select() to use execute();
-#              fixed leaked exception for no-op change_column(); removed verbose SQL dump
-#              from columns(); added missing scale parameter in normalize_type().
-#
-# 25 Jan 2011: Cleaned up, updated for AREL, added support for splitting query batches
-#              when a DECLARE CURSOR is detected
-#
-# 15 Feb 2011: More clean ups, implemented .primary_key so that .save() works from AR
-#
-# 21 Feb 2011: Clean up as usual, implemented .insert_sql() so that .save() correctly
-#              sets the new record ID in the AR instance; finally implemented
-#              reconnect! - in the safest way possible.
-#
-
 require 'active_record/connection_adapters/abstract_adapter'
 
 unless defined? SybSQL
