@@ -1,5 +1,6 @@
 require 'arel/visitors/sybase'
 require 'active_record/connection_adapters/abstract_adapter'
+require 'tiny_tds'
 
 module ActiveRecord
   class Base
