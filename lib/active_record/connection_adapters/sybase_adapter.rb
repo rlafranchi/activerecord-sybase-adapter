@@ -318,9 +318,8 @@ module ActiveRecord
         begin
           execute "ALTER TABLE #{table_name} MODIFY #{column_name} #{type_to_sql(type, options[:limit])}"
         rescue StatementInvalid => e
-          # Swallow exception and reset context if no-op.
+          # Swallow exception if no-op.
           raise e unless e.message =~ /no columns to drop, add or modify/
-          @connection.context.reset
         end
 
         if options.has_key?(:default)
