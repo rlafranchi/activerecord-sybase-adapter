@@ -403,7 +403,17 @@ module ActiveRecord
         select(sql, name).map!(&:values)
       end
 
+      # If a DECLARE CURSOR statement is present in the SQL query,
+      # runs it as a separate batch.
+      CursorRegexp = /DECLARE [_\w\d]+ ?(?:UNIQUE|SCROLL|NO SCROLL|DYNAMIC SCROLL|INSENSITIVE) CURSOR FOR .+ (?:FOR (?:READ ONLY|UPDATE))/m
+
       def select(sql, name = nil)
+        if sql =~ CursorRegexp
+          cursor      = $&
+          sql[cursor] = ''
+          raw_execute(cursor, "Cursor declaration for #{name}")
+        end
+
         result = raw_execute(sql, name)
         clean_up_result result do
           return result.to_a
