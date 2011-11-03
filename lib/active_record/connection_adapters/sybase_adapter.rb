@@ -467,6 +467,10 @@ module ActiveRecord
         rows
       end
 
+      def select_rows(sql, name = nil)
+        select(sql, name).map!(&:values)
+      end
+
       def has_identity_column(table_name)
         !get_identity_column(table_name).nil?
       end
