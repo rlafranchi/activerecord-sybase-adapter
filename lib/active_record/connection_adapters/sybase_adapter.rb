@@ -487,8 +487,22 @@ module ActiveRecord
       end
 
       # Resolve all user-defined types (udt) to their fundamental types.
-      def resolve_type(field_type)
-        (@udts ||= {})[field_type] ||= select_one("sp_help #{field_type}")["Storage_type"].strip
+      # We do not use sp_help as it uses temporary tables that cannot be
+      # used in transactions, that could be started e.g. when migrations
+      # are run.
+      #
+      def resolve_type(type)
+        (@udts ||= {})[type] ||= begin
+          sql = <<-sql
+            SELECT st.name AS storage_type
+            FROM systypes s, systypes st
+            WHERE s.type = st.type
+              AND st.name NOT IN ('longsysname', 'nchar', 'nvarchar', 'sysname', 'timestamp')
+              AND s.name = '#{type}'
+          sql
+
+          select_one(sql, "Field type for #{type}")['storage_type'].strip
+        end
       end
 
       def normalize_type(field_type, prec, scale, length)
