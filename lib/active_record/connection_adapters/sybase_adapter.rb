@@ -435,6 +435,10 @@ module ActiveRecord
         end
       end
 
+      def select_rows(sql, name = nil)
+        select(sql, name).map!(&:values)
+      end
+
       # Select limit number of rows starting at optional offset.
       # If a DECLARE CURSOR statement is present in the SQL query,
       # runs it as a separate batch.
