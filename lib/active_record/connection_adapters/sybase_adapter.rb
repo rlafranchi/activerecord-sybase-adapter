@@ -132,6 +132,7 @@ module ActiveRecord
         connect
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
+        @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
         @quoted_column_names = {}
       end
 
@@ -246,7 +247,7 @@ module ActiveRecord
 
       def tables(name = nil)
         name ||= 'Tables list'
-        select("SELECT name FROM sysobjects WHERE type IN ('U', 'V')", name).map { |row| row['name'] }
+        select("SELECT name FROM sysobjects WHERE type IN (#@table_types)", name).map { |row| row['name'] }
       end
 
       def indexes(table_name, name = nil)
@@ -269,7 +270,7 @@ module ActiveRecord
                 col.usertype = type.usertype AND
                 type.name != 'timestamp'     AND
                 col.cdefault *= def.id       AND
-                obj.type IN ('U', 'V')       AND
+                obj.type IN (#@table_types)  AND
                 obj.name = '#{table_name}'
           ORDER BY col.colid
         sql
