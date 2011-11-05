@@ -416,17 +416,7 @@ module ActiveRecord
         end
 
         result = raw_execute(sql, name)
-        clean_up_result result do
-          return result.to_a
-        end
-      end
-
-      def clean_up_result(result)
-        begin
-          return yield result
-        ensure
-          result.cancel
-        end
+        return result.to_a.tap { result.cancel }
       end
 
       def has_identity_column(table_name)
