@@ -11,8 +11,8 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.required_ruby_version = ">= 1.8.7"
 
-  s.authors     = ["John R. Sheets", "Marcello Barnaba", "Simone Carletti"]
-  s.email       = ["", "vjt@openssl.it", "weppos@weppos.net"]
+  s.authors     = ["John R. Sheets", "Marcello Barnaba", "Simone Carletti",   "Darrin Thompson"   ]
+  s.email       = ["",               "vjt@openssl.it",   "weppos@weppos.net", "darrinth@gmail.com"]
   s.homepage    = "http://github.com/ifad/activerecord-sybase-adapter"
 
   s.files         = `git ls-files`.split("\n")
@@ -23,6 +23,5 @@ Gem::Specification.new do |s|
   s.add_development_dependency("rake")
   s.add_development_dependency("yard")
 
-  s.add_dependency "tiny_tds",            "~> 0.5"
-  s.add_dependency "arel-sybase-visitor", ">= 0.1.0"
+  s.add_dependency "tiny_tds", "~> 0.5"
 end
