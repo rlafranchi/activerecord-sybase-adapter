@@ -374,12 +374,8 @@ module ActiveRecord
       def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
         super
 
-        @connection.sql('SELECT @@IDENTITY')
-        unless @connection.cmd_fail?
-          id = @connection.top_row_result.rows.first.first
-          id = id.to_i if id
-          return id if id > 0
-        end
+        id = select_one('SELECT @@IDENTITY AS id').fetch('id').to_i
+        return id if id > 0
       end
 
       def begin_db_transaction
