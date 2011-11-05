@@ -1,21 +1,24 @@
 ActiveRecord Sybase Adapter
 ===========================
 
-Flawed though it is, we still depends on this for our app. Because
-stinky code makes app stink as well, this adapter has been cleaned
-up for Rails 3, by removing all the LIMIT and OFFSET hacks, that
-are now handled into AREL.
+This adapter is an almost complete rewrite of the original Sybase
+adapter by John R. Sheets, brought up to date with Rails 3.1.
 
-A sybase Visitor for AREL [is available on the IFAD public GitHub
-account](http://github.com/ifad/arel-sybase-visitor) as well, with
-excellent pagination support using Server-Side Cursors (DBAs please
-scream away from here! :-D).
+It depends on a [sybase Visitor for AREL](http://github.com/ifad/arel-sybase-visitor)
+that implements LIMIT and OFFSET using Cursors on ASE 15 and temp
+tables on ASE 12.5. Because of this difference, the adapter does
+*NOT* depend explicitly on the visitor, but rather you must use
+Bundler to require the branch you need in your Gemfile.
 
-Because cursors must be declared in their own batch, this adapter
-splits SQL that contains a DECLARE cursor into two separate batches.
+Caveats
+-------
 
-This way, if you call .to_sql onto AREL nodes you'll get the whole
-SQL string back, but you won't trigger cursor leakage.
+We are not releasing this adapter on rubygems.org in order to not
+disrupt live rails application depending on the age old adapter
+still available on gems.rubyonrails.org.
 
-  - vjt  Tue Jan 25 15:18:27 CET 2011
+Credits
+-------
 
+Brought up to date with Rails 3.0 by by Marcello Barnaba <vjt@openssl.it>,
+and Rails 3.1 thanks to Simone Carletti <weppos@weppos.net>.
