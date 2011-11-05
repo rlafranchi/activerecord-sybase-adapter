@@ -524,7 +524,7 @@ module ActiveRecord
         end
         "#{type}#{spec}"
       end
-    end
+    end # class SybaseAdapter
 
     class Context < SybSQLContext
       DEADLOCK = 1205
@@ -602,7 +602,7 @@ module ActiveRecord
 
         return true
       end
-    end
+    end # class Context
 
-  end
-end
+  end # module ConnectionAdapters
+end # module ActiveRecord
