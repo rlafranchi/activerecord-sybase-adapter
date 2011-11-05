@@ -242,7 +242,7 @@ module ActiveRecord
       end
 
       def current_database
-        select_value 'SELECT DATABASE() as db'
+        select_value 'SELECT DB_NAME() AS name', 'Current DB name'
       end
 
       def tables(name = nil)
