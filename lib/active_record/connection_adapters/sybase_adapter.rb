@@ -366,8 +366,7 @@ module ActiveRecord
       # DATABASE STATEMENTS ======================================
 
       def execute(sql, name = nil)
-        results = raw_execute(sql, name)
-        return results.do
+        raw_execute(sql, name, :do)
       end
 
       # Executes the given INSERT sql and returns the new record's ID
@@ -415,13 +414,11 @@ module ActiveRecord
         true
       end
 
-      def raw_execute(sql, name = nil)
-        # Useful to uncomment when debugging.
-        #p [name, sql]
+      def raw_execute(sql, name = nil, meth = nil)
         log(sql, name) do
           raise 'Connection is closed' unless active?
-
-          return @connection.execute(sql)
+          result = @connection.execute(sql)
+          meth ? result.send(meth) : result
         end
       end
 
@@ -440,8 +437,7 @@ module ActiveRecord
           raw_execute(cursor, "Cursor declaration for #{name}")
         end
 
-        result = raw_execute(sql, name)
-        return result.to_a.tap { result.cancel }
+        return raw_execute(sql, name, :to_a)
       end
 
       def has_identity_column(table_name)
