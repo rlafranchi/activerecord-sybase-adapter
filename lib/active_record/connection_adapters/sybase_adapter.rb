@@ -103,7 +103,23 @@ module ActiveRecord
         end
       end # class SybaseColumn
 
-      # Sybase adapter
+      ADAPTER_NAME = 'Sybase'
+
+      NATIVE_DATABASE_TYPES = {
+        :primary_key => "numeric(9,0) IDENTITY PRIMARY KEY",
+        :string      => { :name => "varchar", :limit => 255 },
+        :text        => { :name => "text" },
+        :integer     => { :name => "int" },
+        :float       => { :name => "float", :limit => 8 },
+        :decimal     => { :name => "decimal" },
+        :datetime    => { :name => "datetime" },
+        :timestamp   => { :name => "timestamp" },
+        :time        => { :name => "time" },
+        :date        => { :name => "datetime" },
+        :binary      => { :name => "image"},
+        :boolean     => { :name => "bit" }
+      }
+
       def initialize(logger, connection_parameters, database, config)
         @connection_parameters, @config = connection_parameters, config
         super(connect!(logger), logger)
@@ -115,38 +131,83 @@ module ActiveRecord
         raise "Cannot USE #{database}" unless @connection.sql_norow("USE #{database}")
       end
 
-      def native_database_types
-        {
-          :primary_key => "numeric(9,0) IDENTITY PRIMARY KEY",
-          :string      => { :name => "varchar", :limit => 255 },
-          :text        => { :name => "text" },
-          :integer     => { :name => "int" },
-          :float       => { :name => "float", :limit => 8 },
-          :decimal     => { :name => "decimal" },
-          :datetime    => { :name => "datetime" },
-          :timestamp   => { :name => "timestamp" },
-          :time        => { :name => "time" },
-          :date        => { :name => "datetime" },
-          :binary      => { :name => "image"},
-          :boolean     => { :name => "bit" }
-        }
+      # Returns 'Sybase' as adapter name for identification purposes.
+      def adapter_name
+        ADAPTER_NAME
       end
 
-      def type_to_sql(type, limit = nil, precision = nil, scale = nil) #:nodoc:
-        return super unless type.to_s == 'integer'
-        if !limit.nil? && limit < 4
-          'smallint'
-        else
-          'integer'
+      def supports_migrations? #:nodoc:
+        true
+      end
+
+      def supports_primary_key? #:nodoc:
+        true
+      end
+
+      def native_database_types
+        NATIVE_DATABASE_TYPES
+      end
+
+      # QUOTING ==================================================
+
+      def quote(value, column = nil)
+        return value.quoted_id if value.respond_to?(:quoted_id)
+
+        case value
+          when String
+            if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
+              "#{quote_string(column.class.string_to_binary(value))}"
+            elsif @numconvert && force_numeric?(column) && value =~ /^[+-]?[0-9]+$/o
+              value
+            else
+              "'#{quote_string(value)}'"
+            end
+          when NilClass              then (column && column.type == :boolean) ? '0' : "NULL"
+          when TrueClass             then '1'
+          when FalseClass            then '0'
+          when Float, Fixnum, Bignum then force_numeric?(column) ? value.to_s : "'#{value.to_s}'"
+          else
+            if value.acts_like?(:time)
+              "'#{value.strftime("%Y-%m-%d %H:%M:%S")}'"
+            else
+              super
+            end
         end
       end
 
-      def adapter_name
-        'Sybase'
+      def quote_column_name(name)
+        # If column name is close to max length, skip the quotes, since they
+        # seem to count as part of the length.
+        @quoted_column_names[name] ||=
+          ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
       end
+
+      def quote_string(s)
+        s.gsub(/'/, "''") # ' (for ruby-mode)
+      end
+
+      def quoted_true
+        "1"
+      end
+
+      def quoted_false
+        "0"
+      end
+
+
+      # CONNECTION MANAGEMENT ====================================
 
       def active?
         !(@connection.connection.nil? || @connection.connection_dead?)
+      end
+
+      def reconnect!
+        disconnect!
+        connect!
+      end
+
+      def disconnect!
+        @connection.close rescue nil
       end
 
       def connect!(logger = nil)
@@ -159,36 +220,23 @@ module ActiveRecord
           end
       end
 
-      def disconnect!
-        @connection.close rescue nil
-      end
+      # SCHEMA STATEMENTS ========================================
 
-      def reconnect!
-        disconnect!
-        connect!
+      def type_to_sql(type, limit = nil, precision = nil, scale = nil)
+        return super unless type.to_s == 'integer'
+        if !limit.nil? && limit < 4
+          'smallint'
+        else
+          'integer'
+        end
       end
 
       def table_alias_length
         30
       end
 
-      def execute(sql, name = nil)
-        raw_execute(sql, name)
-        @connection.results[0].row_count
-      end
-
-      def begin_db_transaction()
-        raw_execute 'BEGIN TRAN'
-      end
-      def commit_db_transaction()
-        raw_execute 'COMMIT TRAN'
-      end
-      def rollback_db_transaction()
-        raw_execute 'ROLLBACK TRAN'
-      end
-
       def current_database
-        select_value 'select DB_NAME() as name', 'Current DB name'
+        select_value 'SELECT DB_NAME() AS name', 'Current DB name'
       end
 
       def tables(name = nil)
@@ -237,64 +285,6 @@ module ActiveRecord
           primary = (sysstat2 & 8) == 8
           SybaseColumn.new(name, default_value, type, nullable, identity, primary)
         end
-      end
-
-      def quoted_true
-        "1"
-      end
-
-      def quoted_false
-        "0"
-      end
-
-      def quote(value, column = nil)
-        return value.quoted_id if value.respond_to?(:quoted_id)
-
-        case value
-          when String
-            if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
-              "#{quote_string(column.class.string_to_binary(value))}"
-            elsif @numconvert && force_numeric?(column) && value =~ /^[+-]?[0-9]+$/o
-              value
-            else
-              "'#{quote_string(value)}'"
-            end
-          when NilClass              then (column && column.type == :boolean) ? '0' : "NULL"
-          when TrueClass             then '1'
-          when FalseClass            then '0'
-          when Float, Fixnum, Bignum then force_numeric?(column) ? value.to_s : "'#{value.to_s}'"
-          else
-            if value.acts_like?(:time)
-              "'#{value.strftime("%Y-%m-%d %H:%M:%S")}'"
-            else
-              super
-            end
-        end
-      end
-
-      # True if column is explicitly declared non-numeric, or
-      # if column is nil (not specified).
-      def force_numeric?(column)
-        (column.nil? || [:integer, :float, :decimal].include?(column.type))
-      end
-
-      def quote_string(s)
-        s.gsub(/'/, "''") # ' (for ruby-mode)
-      end
-
-      def quote_column_name(name)
-        # If column name is close to max length, skip the quotes, since they
-        # seem to count as part of the length.
-        @quoted_column_names[name] ||=
-          ((name.to_s.length + 2) <= table_alias_length) ? "[#{name}]" : name.to_s
-      end
-
-      def supports_migrations? #:nodoc:
-        true
-      end
-
-      def supports_primary_key? #:nodoc:
-        true
       end
 
       def primary_key(table)
@@ -366,7 +356,45 @@ module ActiveRecord
         sql
       end
 
+      # DATABASE STATEMENTS ======================================
+
+      def execute(sql, name = nil)
+        raw_execute(sql, name)
+        @connection.results[0].row_count
+      end
+
+      # Executes the given INSERT sql and returns the new record's ID
+      def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
+        super
+
+        @connection.sql('SELECT @@IDENTITY')
+        unless @connection.cmd_fail?
+          id = @connection.top_row_result.rows.first.first
+          id = id.to_i if id
+          return id if id > 0
+        end
+      end
+
+      def begin_db_transaction
+        raw_execute 'BEGIN TRAN'
+      end
+
+      def commit_db_transaction
+        raw_execute 'COMMIT TRAN'
+      end
+
+      def rollback_db_transaction
+        raw_execute 'ROLLBACK TRAN'
+      end
+
     private
+
+      # True if column is explicitly declared non-numeric, or
+      # if column is nil (not specified).
+      def force_numeric?(column)
+        (column.nil? || [:integer, :float, :decimal].include?(column.type))
+      end
+
       def check_null_for_column?(col, sql)
         # Sybase columns are NOT NULL by default, so explicitly set NULL
         # if :null option is omitted.  Disallow NULLs for boolean.
@@ -384,18 +412,6 @@ module ActiveRecord
         true
       end
 
-      # Executes the given INSERT sql and returns the new record's ID
-      def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
-        super
-
-        @connection.sql('SELECT @@IDENTITY')
-        unless @connection.cmd_fail?
-          id = @connection.top_row_result.rows.first.first
-          id = id.to_i if id
-          return id if id > 0
-        end
-      end
-
       def raw_execute(sql, name = nil)
         log(sql, name) do
           raise 'Connection is closed' unless active?
@@ -411,6 +427,10 @@ module ActiveRecord
             raise "#{name} SQL #{sql} failed: #{@connection.context.message}"
           end
         end
+      end
+
+      def select_rows(sql, name = nil)
+        select(sql, name).map!(&:values)
       end
 
       # Select limit number of rows starting at optional offset.
@@ -438,10 +458,6 @@ module ActiveRecord
           end
         end
         rows
-      end
-
-      def select_rows(sql, name = nil)
-        select(sql, name).map!(&:values)
       end
 
       def has_identity_column(table_name)
