@@ -219,6 +219,7 @@ module ActiveRecord
 
       def indexes(table_name, name = nil)
         select("exec sp_helpindex #{table_name}", name).map do |index|
+          next if index["index_name"].blank? # skip index_ptn_name rows
           unique = index["index_description"] =~ /unique/
           primary = index["index_description"] =~ /^clustered/
           if !primary
