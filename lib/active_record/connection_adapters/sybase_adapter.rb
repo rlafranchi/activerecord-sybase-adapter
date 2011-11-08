@@ -214,7 +214,7 @@ module ActiveRecord
       def tables(name = nil)
         name ||= 'Tables list'
         sql = "SELECT name FROM sysobjects WHERE type IN (#@table_types)"
-        @tables_cache ||= select(sql, name).map { |row| row['name'] }
+        select(sql, name).map { |row| row['name'] }
       end
 
       def indexes(table_name, name = nil)
