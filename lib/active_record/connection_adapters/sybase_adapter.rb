@@ -403,7 +403,7 @@ module ActiveRecord
       # runs it as a separate batch.
       CursorRegexp = /DECLARE [_\w\d]+ ?(?:UNIQUE|SCROLL|NO SCROLL|DYNAMIC SCROLL|INSENSITIVE) CURSOR FOR .+ (?:FOR (?:READ ONLY|UPDATE))/m
 
-      def select(sql, name = nil)
+      def select(sql, name = nil, binds = [])
         if sql =~ CursorRegexp
           cursor      = $&
           sql[cursor] = ''
