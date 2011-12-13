@@ -388,11 +388,14 @@ module ActiveRecord
       end
 
       def raw_execute(sql, name = nil, meth = nil)
+        result = nil
         log(sql, name) do
           raise 'Connection is closed' unless active?
           result = @connection.execute(sql)
           meth ? result.send(meth) : result
         end
+      ensure
+        result.cancel
       end
 
       def select_rows(sql, name = nil)
