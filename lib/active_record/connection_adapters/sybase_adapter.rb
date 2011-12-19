@@ -113,6 +113,7 @@ module ActiveRecord
         super(@connection, logger)
 
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
+        @strip_char = config.has_key?(:strip_char) ? config[:strip_char] : false
         @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
         @quoted_column_names = {}
       end
@@ -441,7 +442,9 @@ module ActiveRecord
           raw_execute(cursor, "Cursor declaration for #{name}")
         end
 
-        return raw_execute(sql, name, :to_a)
+        raw_execute(sql, name, :to_a).tap do |rs|
+          rs.each {|row| row.each {|k,v| v.rstrip! if v.respond_to?(:rstrip!)}} if @strip_char
+        end
       end
 
       def has_identity_column(table_name)
