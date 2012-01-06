@@ -144,8 +144,9 @@ module ActiveRecord
           when String
             if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
               "#{quote_string(column.class.string_to_binary(value))}"
-            elsif @numconvert && force_numeric?(column) && value =~ /^[+-]?[0-9]+$/o
-              value
+            elsif @numconvert && force_numeric?(column) && !column.nil?
+              value = column.type == :integer ? value.to_i : value.to_f
+              value.to_s
             else
               "'#{quote_string(value)}'"
             end
