@@ -289,7 +289,7 @@ module ActiveRecord
       end
 
       def rename_column(table, column, new_column_name)
-        execute "EXEC sp_rename '#{table}.#{column}', '#{new_column_name}'"
+        execute "EXEC sp_rename '#{table}.#{column}', '#{new_column_name}', 'column'"
       end
 
       def change_column(table_name, column_name, type, options = {}) #:nodoc:
