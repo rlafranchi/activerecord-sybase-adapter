@@ -93,6 +93,10 @@ module ActiveRecord
         @quoted_column_names = {}
       end
 
+      def self.visitor_for(pool)
+        Arel::Visitors::Sybase.new(pool)
+      end
+
       # Returns 'Sybase' as adapter name for identification purposes.
       def adapter_name
         ADAPTER_NAME
