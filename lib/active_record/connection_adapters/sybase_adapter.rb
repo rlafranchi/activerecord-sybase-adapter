@@ -91,7 +91,10 @@ module ActiveRecord
         @strip_char = config.has_key?(:strip_char) ? config[:strip_char] : false
         @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
         @quoted_column_names = {}
-        @visitor = Arel::Visitors::Sybase.new(self) if defined?(Arel::Visitors::Sybase)
+      end
+
+      def self.visitor_for(pool)
+        Arel::Visitors::Sybase.new(pool)
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
