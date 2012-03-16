@@ -1,4 +1,5 @@
 require 'arel/visitors/sybase'
+require 'arel/visitors/bind_visitor'
 require 'active_record/connection_adapters/abstract_adapter'
 require 'tiny_tds'
 
@@ -35,6 +36,10 @@ module ActiveRecord
     # * <tt>:database</tt> -- The name of the database. No default, must be provided.
     # * <tt>:username</tt> -- Defaults to "sa".
     # * <tt>:password</tt> -- Defaults to empty string.
+    # * <tt>:tds_version</tt> -- Sets the TDS protocol version: 42 for 4.2 and 50 for 5.0.
+    # * <tt>:prepared_statements</tt> -- Enable prepared statements support,
+    #       requireds TDS version 5.0. *WARNING*: on tiny_tds, as of 0.5.1, there
+    #       is no support for them: you'll get a crash if you enable this feature
     #
     class SybaseAdapter < AbstractAdapter # :nodoc:
       class SybaseColumn < Column
@@ -93,8 +98,23 @@ module ActiveRecord
         @quoted_column_names = {}
       end
 
+      # Returns the Arel visitor for this connection pool.
+      #
+      # Disable bind variables, unless explicitly required via the
+      # "prepared_statements" configuration variable.
+      #
+      # Please note that TDS version 5.0 is required for prepared statements,
+      # and current tiny_tds version 0.5.1 does not support them (you'll get a
+      # segfault).
+      #
       def self.visitor_for(pool)
-        Arel::Visitors::Sybase.new(pool)
+        if pool.spec.config[:prepared_statements]
+          Arel::Visitors::Sybase
+        else
+          Class.new(Arel::Visitors::Sybase) do
+            include Arel::Visitors::BindVisitor
+          end
+        end.new(pool)
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
@@ -189,7 +209,7 @@ module ActiveRecord
           :username      => @config[:username],
           :password      => @config[:password],
           :database      => @config[:database],
-          :tds_version   => @config[:tds_version],
+          :tds_version   => @config[:tds_version] || '42',
           :appname       => appname,
           :login_timeout => login_timeout,
           :timeout       => timeout,
