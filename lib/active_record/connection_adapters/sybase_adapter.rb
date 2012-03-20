@@ -96,25 +96,23 @@ module ActiveRecord
         @strip_char = config.has_key?(:strip_char) ? config[:strip_char] : false
         @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
         @quoted_column_names = {}
-      end
 
-      # Returns the Arel visitor for this connection pool.
-      #
-      # Disable bind variables, unless explicitly required via the
-      # "prepared_statements" configuration variable.
-      #
-      # Please note that TDS version 5.0 is required for prepared statements,
-      # and current tiny_tds version 0.5.1 does not support them (you'll get a
-      # segfault).
-      #
-      def self.visitor_for(pool)
-        if pool.spec.config[:prepared_statements]
+        # Set the Arel visitor for this adapter.
+        #
+        # Disable bind variables, unless explicitly required via the
+        # "prepared_statements" configuration variable.
+        #
+        # Please note that TDS version 5.0 is required for prepared statements,
+        # and current tiny_tds version 0.5.1 does not support them (you'll get a
+        # segfault).
+        #
+        @visitor = if config[:prepared_statements]
           Arel::Visitors::Sybase
         else
           Class.new(Arel::Visitors::Sybase) do
             include Arel::Visitors::BindVisitor
           end
-        end.new(pool)
+        end.new(self)
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
