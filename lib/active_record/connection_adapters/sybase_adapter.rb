@@ -426,7 +426,7 @@ module ActiveRecord
       end
 
       def select_rows(sql, name = nil)
-        select(sql, name).map!(&:values)
+        select(sql, name).map(&:values)
       end
 
       # If a DECLARE CURSOR statement is present in the SQL query,
