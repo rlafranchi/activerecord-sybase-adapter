@@ -69,6 +69,10 @@ module ActiveRecord
         end
       end # class SybaseColumn
 
+      class SybaseResult < ActiveRecord::Result
+        delegate :map, :each, :collect!, to: :@rows
+      end
+
       ADAPTER_NAME = 'Sybase'
 
       NATIVE_DATABASE_TYPES = {
@@ -374,7 +378,7 @@ module ActiveRecord
           raise 'Connection is closed' unless active?
 
           result = @connection.execute(sql)
-          return ActiveRecord::Result.new(result.fields, result.entries)
+          return SybaseResult.new(result.fields, result.entries)
         end
       ensure
         result.cancel
