@@ -389,15 +389,15 @@ module ActiveRecord
       end
 
       def begin_db_transaction
-        raw_execute 'BEGIN TRAN'
+        exec_query 'BEGIN TRAN'
       end
 
       def commit_db_transaction
-        raw_execute 'COMMIT TRAN'
+        exec_query 'COMMIT TRAN'
       end
 
       def rollback_db_transaction
-        raw_execute 'ROLLBACK TRAN'
+        exec_query 'ROLLBACK TRAN'
       end
 
     private
@@ -437,10 +437,10 @@ module ActiveRecord
         if sql =~ CursorRegexp
           cursor      = $&
           sql[cursor] = ''
-          raw_execute(cursor, "Cursor declaration for #{name}")
+          exec_query(cursor, "Cursor declaration for #{name}")
         end
 
-        raw_execute(sql, name, :to_a).tap do |rs|
+        exec_query(sql, name).tap do |rs|
           rs.each {|row| row.each {|k,v| v.rstrip! if v.respond_to?(:rstrip!)}} if @strip_char
         end
       end
