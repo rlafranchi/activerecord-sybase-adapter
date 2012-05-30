@@ -99,6 +99,9 @@ module ActiveRecord
         @numconvert = config.has_key?(:numconvert) ? config[:numconvert] : true
         @strip_char = config.has_key?(:strip_char) ? config[:strip_char] : false
         @table_types = config[:views_as_tables] ? "'U', 'V'" : "'U'"
+
+        @connection.query_options[:timezone] = config[:timezone].presence || :local
+
         @quoted_column_names = {}
 
         # Set the Arel visitor for this adapter.
