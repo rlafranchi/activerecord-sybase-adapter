@@ -378,6 +378,10 @@ module ActiveRecord
 
       # DATABASE STATEMENTS ======================================
 
+      # no-op
+      def explain(arel, binds = [])
+      end
+
       def execute(sql, name = nil)
         exec_query(sql, name)
       end
