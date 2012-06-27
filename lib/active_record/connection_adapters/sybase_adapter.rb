@@ -135,6 +135,14 @@ module ActiveRecord
         true
       end
 
+      def supports_savepoints?
+        false
+      end
+
+      def supports_explain?
+        false
+      end
+
       def native_database_types
         NATIVE_DATABASE_TYPES
       end
