@@ -426,7 +426,7 @@ module ActiveRecord
           meth ? result.send(meth) : result
         end
       ensure
-        result.cancel
+        result.cancel if result
       end
 
       def select_rows(sql, name = nil)
