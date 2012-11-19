@@ -396,7 +396,7 @@ module ActiveRecord
           return SybaseResult.new(result.fields, result.entries)
         end
       ensure
-        result.cancel
+        result.cancel if result
       end
 
       # Executes the given INSERT sql and returns the new record's ID
