@@ -421,7 +421,7 @@ module ActiveRecord
       def raw_execute(sql, name = nil, meth = nil)
         result = nil
         log(sql, name) do
-          raise 'Connection is closed' unless active?
+          reconnect! unless active?
           result = @connection.execute(sql)
           meth ? result.send(meth) : result
         end
