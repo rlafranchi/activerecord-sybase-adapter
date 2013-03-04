@@ -1,24 +1,27 @@
 # sybase_adapter.rb
 # Author: John R. Sheets
-# 
+#
 # 01 Mar 2006: Initial version.  Based on code from Will Sobel
 #              (http://dev.rubyonrails.org/ticket/2030)
-# 
+#
 # 17 Mar 2006: Added support for migrations; fixed issues with :boolean columns.
-# 
+#
 # 13 Apr 2006: Improved column type support to properly handle dates and user-defined
 #              types; fixed quoting of integer columns.
-# 
+#
 # 05 Jan 2007: Updated for Rails 1.2 release:
 #              restricted Fixtures#insert_fixtures monkeypatch to Sybase adapter;
 #              removed SQL type precision from TEXT type to fix broken
 #              ActiveRecordStore (jburks, #6878); refactored select() to use execute();
 #              fixed leaked exception for no-op change_column(); removed verbose SQL dump
 #              from columns(); added missing scale parameter in normalize_type().
+#
+# 04 Mat 2013: Lleir Borras Metje
+#              Remove the "begin ... rescue" forthe sybsql library, if it is not
+#              present it should not continue because it will not work
 
 require 'active_record/connection_adapters/abstract_adapter'
 
-begin
 require 'sybsql'
 
 module ActiveRecord
@@ -65,7 +68,7 @@ module ActiveRecord
     # * The sybase-ctlib bindings do not support the DATE SQL column type; use DATETIME instead.
     # * Table and column names are limited to 30 chars in Sybase 12.5
     # * :binary columns not yet supported
-    # * :boolean columns use the BIT SQL type, which does not allow nulls or 
+    # * :boolean columns use the BIT SQL type, which does not allow nulls or
     #   indexes.  If a DEFAULT is not specified for ALTER TABLE commands, the
     #   column will be declared with DEFAULT 0 (false).
     #
@@ -240,7 +243,7 @@ module ActiveRecord
 SELECT col.name AS name, type.name AS type, col.prec, col.scale,
   col.length, col.status, obj.sysstat2, def.text
  FROM sysobjects obj, syscolumns col, systypes type, syscomments def
- WHERE obj.id = col.id AND col.usertype = type.usertype AND type.name != 'timestamp' 
+ WHERE obj.id = col.id AND col.usertype = type.usertype AND type.name != 'timestamp'
   AND col.cdefault *= def.id AND obj.type = 'U' AND obj.name = '#{table_name}' ORDER BY col.colid
 SQLTEXT
         @logger.debug "Get Column Info for table '#{table_name}'" if @logger
@@ -278,7 +281,7 @@ SQLTEXT
         return value.quoted_id if value.respond_to?(:quoted_id)
 
         case value
-          when String                
+          when String
             if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
               "#{quote_string(column.class.string_to_binary(value))}"
             elsif @numconvert && force_numeric?(column) && value =~ /^[+-]?[0-9]+$/o
@@ -489,7 +492,7 @@ SQLTEXT
         end
 
         raise StatementInvalid, "SQL Command Failed for #{name}: #{sql}\nMessage: #{@connection.context.message}" if @connection.context.failed? or @connection.cmd_fail?
-      
+
         rows = []
         results = @connection.top_row_result
         if results && results.rows.length > 0
@@ -627,7 +630,7 @@ SQLTEXT
 
         @failed = true
 
-        # Not retry , CS_CV_RETRY_FAIL( probability TimeOut ) 
+        # Not retry , CS_CV_RETRY_FAIL( probability TimeOut )
         if( msg[ 'severity' ] == "RETRY_FAIL" ) then
           @timeout_p = true
           return false
@@ -657,8 +660,4 @@ class Fixtures
       original_insert_fixtures
     end
   end
-end
-
-rescue LoadError => cannot_require_sybase
-  # Couldn't load sybase adapter
 end
