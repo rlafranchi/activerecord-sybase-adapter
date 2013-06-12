@@ -236,8 +236,10 @@ module ActiveRecord
 
       def type_to_sql(type, limit = nil, precision = nil, scale = nil)
         return super unless type.to_s == 'integer'
-        if !limit.nil? && limit < 4
+        if limit && limit < 4
           'smallint'
+        elsif limit && limit > 4
+          "numeric(#{limit.to_i},0)"
         else
           'integer'
         end
