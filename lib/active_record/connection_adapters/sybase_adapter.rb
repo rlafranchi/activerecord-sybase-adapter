@@ -235,13 +235,20 @@ module ActiveRecord
       # SCHEMA STATEMENTS ========================================
 
       def type_to_sql(type, limit = nil, precision = nil, scale = nil)
-        return super unless type.to_s == 'integer'
-        if limit && limit < 4
-          'smallint'
-        elsif limit && limit > 4
-          "numeric(#{limit.to_i},0)"
+        case type.to_s
+        when 'binary', 'boolean'
+          limit = nil
+          super
+        when 'integer'
+          if limit && limit < 4
+            'smallint'
+          elsif limit && limit > 4
+            "numeric(#{limit.to_i},0)"
+          else
+            'integer'
+          end
         else
-          'integer'
+          super
         end
       end
 
