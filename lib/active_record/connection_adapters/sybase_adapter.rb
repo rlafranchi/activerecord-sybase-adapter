@@ -428,6 +428,10 @@ module ActiveRecord
         exec_query 'ROLLBACK TRAN'
       end
 
+      def truncate_table t
+        exec_query "TRUNCATE TABLE #{t}"
+      end
+
     private
 
       # True if column is explicitly declared non-numeric, or
