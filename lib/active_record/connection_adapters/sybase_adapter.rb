@@ -401,7 +401,9 @@ module ActiveRecord
         log(sql, name, binds) do
           raise 'Connection is closed' unless active?
 
+
           result = @connection.execute(sql)
+
           return SybaseResult.new(result.fields, result.entries)
         end
       ensure
@@ -412,8 +414,13 @@ module ActiveRecord
       def insert_sql(sql, name = nil, pk = nil, id_value = nil, sequence_name = nil)
         super
 
-        id = select_one('SELECT @@IDENTITY AS id').fetch('id').to_i
-        return id if id > 0
+        exec_query('SELECT @@IDENTITY AS id')
+      end
+
+      def exec_insert(sql, name, binds)
+        super
+
+        exec_query('SELECT @@IDENTITY AS id')
       end
 
       def begin_db_transaction
