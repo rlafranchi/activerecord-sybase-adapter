@@ -1,4 +1,3 @@
-require 'arel/visitors/sybase'
 require 'active_record/connection_adapters/abstract_adapter'
 require 'tiny_tds'
 
@@ -202,9 +201,9 @@ module ActiveRecord
         logger ||= @logger
 
         appname = @config[:appname] || Rails.application.class.name.split('::').first rescue nil
-        login_timeout = @config[:login_timeout].present? ? @config[:login_timeout].to_i : nil
-        timeout = @config[:timeout].present? ? @config[:timeout].to_i/1000 : nil
-        encoding = @config[:encoding].present? ? @config[:encoding] : nil
+        login_timeout = !@config[:login_timeout].blank? ? @config[:login_timeout].to_i : nil
+        timeout = !@config[:timeout].blank? ? @config[:timeout].to_i/1000 : nil
+        encoding = !@config[:encoding].blank? ? @config[:encoding] : nil
         @connection = TinyTds::Client.new({
           :dataserver    => @config[:dataserver],
           :host          => @config[:host],
