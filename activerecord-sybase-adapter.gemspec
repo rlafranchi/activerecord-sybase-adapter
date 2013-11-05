@@ -4,7 +4,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "activerecord-sybase-adapter"
-  s.version     = "3.0.0"
+  s.version     = "2.0.1"
   s.summary     = "ActiveRecord adapter for Sybase."
   s.description = "ActiveRecord adapter for Sybase."
 
