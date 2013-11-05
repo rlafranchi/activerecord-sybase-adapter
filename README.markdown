@@ -2,15 +2,9 @@ ActiveRecord Sybase Adapter (TDS branch)
 ========================================
 
 This adapter is an almost complete rewrite of the original Sybase
-adapter by John R. Sheets, brought up to date with Rails 3.0 and
+adapter by John R. Sheets, brought up to date with Rails 2.0 and
 with the database driver changed from the original Sybase CT with
 [Tiny TDS](http://rubydoc.info/gems/tiny_tds/frames).
-
-It depends on a [sybase Visitor for AREL](http://github.com/ifad/arel-sybase-visitor)
-that implements LIMIT and OFFSET using Cursors on ASE 15 and temp
-tables on ASE 12.5. Because of this difference, the adapter does
-*NOT* depend explicitly on the visitor, but rather you must use
-Bundler to require the branch you need in your Gemfile.
 
 Caveats
 -------
