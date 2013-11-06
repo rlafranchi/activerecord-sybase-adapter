@@ -181,6 +181,30 @@ module ActiveRecord
         "0"
       end
 
+      def add_limit_offset!(sql, options) # :nodoc:
+        @limit = options[:limit]
+        @offset = options[:offset]
+        if use_temp_table?
+          # Use temp table to hack offset with Sybase
+          sql.sub!(/ FROM /i, ' INTO #artemp FROM ')
+        elsif zero_limit?
+          # "SET ROWCOUNT 0" turns off limits, so we have
+          # to use a cheap trick.
+          if sql =~ /WHERE/i
+            sql.sub!(/WHERE/i, 'WHERE 1 = 2 AND ')
+          elsif sql =~ /ORDER\s+BY/i
+            sql.sub!(/ORDER\s+BY/i, 'WHERE 1 = 2 ORDER BY')
+          else
+            sql << 'WHERE 1 = 2'
+          end
+        end
+      end
+
+      def add_lock!(sql, options) #:nodoc:
+        @logger.info "Warning: Sybase :lock option '#{options[:lock].inspect}' not supported" if @logger && options.has_key?(:lock)
+        sql
+      end
+
 
       # CONNECTION MANAGEMENT ====================================
 
@@ -417,6 +441,43 @@ module ActiveRecord
         true
       end
 
+      # Return the last value of the identity global value.
+      def last_insert_id
+        @connection.sql("SELECT @@IDENTITY")
+        unless @connection.cmd_fail?
+          id = @connection.top_row_result.rows.first.first
+          if id
+            id = id.to_i
+            id = nil if id == 0
+          end
+        else
+          id = nil
+        end
+        id
+      end
+
+      def affected_rows(name = nil)
+        @connection.sql("SELECT @@ROWCOUNT")
+        unless @connection.cmd_fail?
+          count = @connection.top_row_result.rows.first.first
+          count = count.to_i if count
+        else
+          0
+        end
+      end
+
+      # If limit is not set at all, we can ignore offset;
+      # if limit *is* set but offset is zero, use normal select
+      # with simple SET ROWCOUNT.  Thus, only use the temp table
+      # if limit is set and offset > 0.
+      def use_temp_table?
+        !@limit.nil? && !@offset.nil? && @offset > 0
+      end
+
+      def zero_limit?
+        !@limit.nil? && @limit == 0
+      end
+
       def raw_execute(sql, name = nil, meth = nil)
         result = nil
         log(sql, name) do
@@ -432,17 +493,7 @@ module ActiveRecord
         select(sql, name).map!(&:values)
       end
 
-      # If a DECLARE CURSOR statement is present in the SQL query,
-      # runs it as a separate batch.
-      CursorRegexp = /DECLARE [_\w\d]+ ?(?:UNIQUE|SCROLL|NO SCROLL|DYNAMIC SCROLL|INSENSITIVE) CURSOR FOR .+ (?:FOR (?:READ ONLY|UPDATE))/m
-
       def select(sql, name = nil)
-        if sql =~ CursorRegexp
-          cursor      = $&
-          sql[cursor] = ''
-          raw_execute(cursor, "Cursor declaration for #{name}")
-        end
-
         raw_execute(sql, name, :to_a).tap do |rs|
           rs.each {|row| row.each {|k,v| v.rstrip! if v.respond_to?(:rstrip!)}} if @strip_char
         end
