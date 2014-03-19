@@ -464,7 +464,7 @@ module ActiveRecord
         true
       end
 
-      def select_rows(sql, name = nil)
+      def select_rows(sql, name = nil, binds = [])
         select(sql, name).map(&:values)
       end
 
