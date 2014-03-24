@@ -35,10 +35,7 @@ Rake::DSL.module_eval do
 
 end
 
-load File.expand_path('databases3.rake', File.dirname(__FILE__))
 
-#if defined? ActiveRecord::Tasks::DatabaseTasks # 4.0
-#  load File.expand_path('databases4.rake', File.dirname(__FILE__))
-#else # 3.x / 2.3
-#  load File.expand_path('databases3.rake', File.dirname(__FILE__))
-#end
+unless defined? ActiveRecord::Tasks::DatabaseTasks # 4.0
+  load File.expand_path('databases3.rake', File.dirname(__FILE__))
+end
