@@ -18,7 +18,9 @@ Compile:
 
     $ ruby extconf.rb
     $ make
+    $ make install
 
-And finally move the generated files manually because the **make install** command doesn't work.
+And finally install the ruby libraries into the site\_ruby directory, as make
+install doesn't do it. For ruby 1.9 and above:
 
     $ cp sybct.rb sybsql.rb `ruby -e "print RbConfig::CONFIG['sitelibdir']"`
