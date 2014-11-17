@@ -9,19 +9,16 @@ Installing 'sybsql'
 
 Install **freetds** library stable version.
 
-Download **sybase-ctlib** from [http://raa.ruby-lang.org/project/sybase-ctlib/](http://raa.ruby-lang.org/project/sybase-ctlib/) and uncompress it.
+Download **sybase-ctlib** from [https://github.com/ifad/sybct-ruby](https://github.com/ifad/sybct-ruby).
 
-Edit **extconf.rb** file and make at least this changes:
+Edit **extconf.rb** if you're not on Linux or your ASE is not in `/opt/sybase`
+and adjust `$CFLAGS` and `$LDFLAGS` as appropriate.
 
-    $ $CFLAGS = "-g -Wall -DFREETDS -I#{sybase}/include"
-    $ $LDFLAGS = " -L#{sybase}/lib -L/freetds-0.91/src/tds/.libs" 
-    $ $LOCAL_LIBS = "-lct  -lsybdb -rdynamic -ldl -lnsl -lm"
-
-Time to compile
+Compile:
 
     $ ruby extconf.rb
     $ make
 
 And finally move the generated files manually because the **make install** command doesn't work.
 
-    $ cp sybct.rb sybct.so sybsql.rb ~/.rbenv/versions/1.8.7-p352/lib/ruby/site_ruby/1.8/i686-linux
+    $ cp sybct.rb sybsql.rb `ruby -e "print RbConfig::CONFIG['sitelibdir']"`
