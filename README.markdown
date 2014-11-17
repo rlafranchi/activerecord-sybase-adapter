@@ -17,6 +17,27 @@ We are not releasing this adapter on rubygems.org in order to not
 disrupt live rails application depending on the age old adapter
 still available on gems.rubyonrails.org.
 
+Installing 'sybsql'
+------------------
+
+Install **freetds** library stable version.
+
+Download **sybase-ctlib** from [https://github.com/ifad/sybct-ruby](https://github.com/ifad/sybct-ruby).
+
+Edit **extconf.rb** if you're not on Linux or your ASE is not in `/opt/sybase`
+and adjust `$CFLAGS` and `$LDFLAGS` as appropriate.
+
+Compile:
+
+    $ ruby extconf.rb
+    $ make
+    $ make install
+
+And finally install the ruby libraries into the site\_ruby directory, as make
+install doesn't do it. For ruby 1.9 and above:
+
+    $ cp sybct.rb sybsql.rb `ruby -e "print RbConfig::CONFIG['sitelibdir']"`
+
 Credits
 -------
 
