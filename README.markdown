@@ -36,7 +36,7 @@ Compile:
 And finally install the ruby libraries into the site\_ruby directory, as make
 install doesn't do it. For ruby 1.9 and above:
 
-    $ cp sybct.rb sybsql.rb `ruby -e "print RbConfig::CONFIG['sitelibdir']"`
+    $ cp sybct.rb sybsql.rb `ruby -rrbconfig -e "print RbConfig::CONFIG['sitelibdir']"`
 
 Credits
 -------
