@@ -52,15 +52,15 @@ module ActiveRecord
 
         def simplified_type(field_type)
           case field_type
-          when /int|bigint|smallint|tinyint/i        then :integer
-          when /float|double|real/i                  then :float
-          when /decimal|money|numeric|smallmoney/i   then :decimal
-          when /text|ntext/i                         then :text
-          when /binary|image|varbinary/i             then :binary
-          when /char|nchar|nvarchar|string|varchar/i then :string
-          when /bit/i                                then :boolean
-          when /datetime|smalldatetime/i             then :datetime
-          else                                       super
+            when /int|bigint|smallint|tinyint/i        then :integer
+            when /float|double|real/i                  then :float
+            when /decimal|money|numeric|smallmoney/i   then :decimal
+            when /text|ntext/i                         then :text
+            when /binary|image|varbinary/i             then :binary
+            when /char|nchar|nvarchar|string|varchar/i then :string
+            when /bit/i                                then :boolean
+            when /datetime|smalldatetime/i             then :datetime
+            else                                       super
           end
         end
 
@@ -114,12 +114,12 @@ module ActiveRecord
         # segfault).
         #
         @visitor = if config[:prepared_statements]
-                     Arel::Visitors::Sybase
-                   else
-                     Class.new(Arel::Visitors::Sybase) do
-                       include Arel::Visitors::BindVisitor
-                     end
-                   end.new(self)
+          Arel::Visitors::Sybase
+        else
+          Class.new(Arel::Visitors::Sybase) do
+            include Arel::Visitors::BindVisitor
+          end
+        end.new(self)
       end
 
       # Returns 'Sybase' as adapter name for identification purposes.
@@ -147,75 +147,31 @@ module ActiveRecord
         NATIVE_DATABASE_TYPES
       end
 
-      def column_spec(column, types)
-        spec = prepare_column_options(column, types)
-        (spec.keys - [:name, :type]).each{ |k| spec[k].insert(0, "#{k.to_s}: ") }
-        spec
-      end
-
-
-      def prepare_column_options(column, types)
-
-        spec = {}
-        spec[:name]      = column.name.inspect
-
-        # AR has an optimization which handles zero-scale decimals as integers. This
-        # code ensures that the dumper still dumps the column as a decimal.
-        spec[:type]      = if column.type == :integer && /^(numeric|decimal)/ =~ column.sql_type
-                             'decimal'
-                           else
-                             column.type.to_s
-                           end
-
-        if spec[:type].blank?
-          if column.sql_type == "T_note_y(16)"
-            spec[:type] = "text"
-          end
-        end
-
-
-        column_type_limit = types[column.type][:limit] rescue nil
-
-        if column_type_limit
-          spec[:limit]     = column.limit.inspect if column.limit != column_type_limit && spec[:type] != 'decimal'
-        end
-
-        if spec[:type] =="integer"
-          spec.delete :limit
-        end
-
-        spec[:precision] = column.precision.inspect if column.precision
-        spec[:scale]     = column.scale.inspect if column.scale
-        spec[:null]      = 'false' unless column.null
-        spec[:default]   = default_string(column.default) if column.has_default?
-        spec
-      end
-
       # QUOTING ==================================================
 
       def quote(value, column = nil)
         return value.quoted_id if value.respond_to?(:quoted_id)
 
         case value
-        when String
-          if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
-            "#{quote_string(column.class.string_to_binary(value))}"
-          elsif @numconvert && force_numeric?(column) && !column.nil?
-            value = column.type == :integer ? value.to_i : value.to_f
-            value.to_s
+          when String
+            if column && column.type == :binary && column.class.respond_to?(:string_to_binary)
+              "#{quote_string(column.class.string_to_binary(value))}"
+            elsif @numconvert && force_numeric?(column) && !column.nil?
+              value = column.type == :integer ? value.to_i : value.to_f
+              value.to_s
+            else
+              "'#{quote_string(value)}'"
+            end
+          when NilClass              then (column && column.type == :boolean) ? '0' : "NULL"
+          when TrueClass             then '1'
+          when FalseClass            then '0'
+          when Float, Fixnum, Bignum then force_numeric?(column) ? value.to_s : "'#{value.to_s}'"
           else
-            "'#{quote_string(value)}'"
-          end
-        when NilClass              then (column && column.type == :boolean) ? '0' : "NULL"
-        when TrueClass             then '1'
-        when FalseClass            then '0'
-        when Float, Fixnum, Bignum then force_numeric?(column) ? value.to_s : "'#{value.to_s}'"
-        else
-          if value.acts_like?(:time)
-            "'#{value.strftime("%Y-%m-%d %H:%M:%S")}'"
-          else
-            super
-          end
+            if value.acts_like?(:time)
+              "'#{value.strftime("%Y-%m-%d %H:%M:%S")}'"
+            else
+              super
+            end
         end
       end
 
@@ -272,7 +228,7 @@ module ActiveRecord
           :timeout       => timeout,
           :encoding      => encoding,
         }).tap do |client|
-          client.execute("SET ANSINULL ON").do
+            client.execute("SET ANSINULL ON").do
         end
       end
 
@@ -483,7 +439,7 @@ module ActiveRecord
         exec_query "TRUNCATE TABLE #{t}"
       end
 
-      private
+    private
 
       # True if column is explicitly declared non-numeric, or
       # if column is nil (not specified).
@@ -519,7 +475,7 @@ module ActiveRecord
       def select(sql, name = nil, binds = [])
         if sql =~ CursorRegexp
           cursor      = $&
-            sql[cursor] = ''
+          sql[cursor] = ''
           exec_query(cursor, "Cursor declaration for #{name}")
         end
 
@@ -555,35 +511,35 @@ module ActiveRecord
       #
       def resolve_type(type)
         (@udts ||= {})[type] ||= begin
-                                   sql = <<-sql
+          sql = <<-sql
             SELECT st.name AS storage_type
             FROM systypes s, systypes st
             WHERE s.type = st.type
               AND st.name NOT IN ('longsysname', 'nchar', 'nvarchar', 'sysname', 'timestamp')
               AND s.name = '#{type}'
-                                   sql
+          sql
 
-                                   select_one(sql, "Field type for #{type}")['storage_type'].strip
-                                 end
+          select_one(sql, "Field type for #{type}")['storage_type'].strip
+        end
       end
 
       def normalize_type(field_type, prec, scale, length)
         has_scale = (!scale.nil? && scale > 0)
         type = if field_type =~ /numeric/i and !has_scale
-                 'int'
-               elsif field_type =~ /money/i
-                 'numeric'
-               else
-                 resolve_type(field_type.strip)
-               end
+          'int'
+        elsif field_type =~ /money/i
+          'numeric'
+        else
+          resolve_type(field_type.strip)
+        end
 
         spec = if prec
-                 has_scale ? "(#{prec},#{scale})" : "(#{prec})"
-               elsif length && !(type =~ /date|time|text/)
-                 "(#{length})"
-               else
-                 ''
-               end
+          has_scale ? "(#{prec},#{scale})" : "(#{prec})"
+        elsif length && !(type =~ /date|time|text/)
+          "(#{length})"
+        else
+          ''
+        end
         "#{type}#{spec}"
       end
     end # class SybaseAdapter
