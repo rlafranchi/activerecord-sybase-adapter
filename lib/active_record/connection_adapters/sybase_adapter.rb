@@ -47,7 +47,7 @@ module ActiveRecord
 
         def initialize(name, default, sql_type = nil, nullable = nil, identity = nil, primary = nil)
           super(name, default, sql_type, nullable)
-          @default, @identity, @primary = type_cast(default), identity, primary
+          @default, @identity, @primary = type_cast_for_database(default), identity, primary
         end
 
         def simplified_type(field_type)
