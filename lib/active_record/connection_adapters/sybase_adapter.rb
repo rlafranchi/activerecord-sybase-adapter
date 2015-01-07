@@ -60,6 +60,7 @@ module ActiveRecord
             when /char|nchar|nvarchar|string|varchar/i then :string
             when /bit/i                                then :boolean
             when /datetime|smalldatetime/i             then :datetime
+            when /T_note_y/i                           then :text #don't know if this is correct mapping yet
             else                                       super
           end
         end
