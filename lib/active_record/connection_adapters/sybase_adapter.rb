@@ -131,6 +131,20 @@ module ActiveRecord
         end
       end
 
+      # temporary override to fix database_cleaner problem
+      # https://github.com/DatabaseCleaner/database_cleaner/blob/v0.6.7/lib/database_cleaner/active_record/truncation.rb#L123
+      # select.views raises NotImplementedError which isn't rescued by default
+      #
+      # overriding the following
+      # https://github.com/rails/rails/blob/v2.0.2/activerecord/lib/active_record/connection_adapters/abstract/database_statements.rb#L34
+      # def select_rows(sql, name = nil)
+      #   raise NotImplementedError, "select_rows is an abstract method"
+      # end
+      #
+      def select_rows(sql, name = nil)
+        []
+      end
+
       def native_database_types
         {
           :primary_key => "numeric(9,0) IDENTITY PRIMARY KEY",
