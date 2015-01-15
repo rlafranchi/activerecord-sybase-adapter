@@ -145,6 +145,14 @@ module ActiveRecord
         []
       end
 
+      def truncate_table(name)
+        execute "TRUNCATE TABLE #{name}"
+      end
+
+      def delete_table(name)
+        execute "DELETE FROM #{name}"
+      end
+
       def native_database_types
         {
           :primary_key => "numeric(9,0) IDENTITY PRIMARY KEY",
